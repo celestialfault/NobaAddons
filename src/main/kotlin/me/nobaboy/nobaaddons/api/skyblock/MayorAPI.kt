@@ -1,6 +1,7 @@
 package me.nobaboy.nobaaddons.api.skyblock
 
 import me.nobaboy.nobaaddons.NobaAddons
+import me.nobaboy.nobaaddons.core.mayor.ActiveMayor
 import me.nobaboy.nobaaddons.core.mayor.Mayor
 import me.nobaboy.nobaaddons.core.mayor.MayorPerk
 import me.nobaboy.nobaaddons.data.json.MayorJson
@@ -35,15 +36,15 @@ object MayorAPI {
 
 	val foxyExtraEventPattern by Regex("Schedules an extra §.(?<event>[A-z ]+) §.event during the year\\.").fromRepo("mayor.foxy_event")
 
-	var currentMayor: Mayor = Mayor.UNKNOWN
+	var currentMayor: ActiveMayor = Mayor.UNKNOWN.withNone()
 		private set
-	var currentMinister: Mayor = Mayor.UNKNOWN
-		private set
-
-	var jerryMayor: Pair<Mayor, Timestamp> = Mayor.UNKNOWN to Timestamp.distantPast()
+	var currentMinister: ActiveMayor = Mayor.UNKNOWN.withNone()
 		private set
 
-	private var lastMayor: Mayor? = null
+	var jerryMayor: Pair<ActiveMayor, Timestamp> = Mayor.UNKNOWN.withNone() to Timestamp.distantPast()
+		private set
+
+	private var lastMayor: ActiveMayor? = null
 
 	private var lastApiUpdate = Timestamp.distantPast()
 	private val shouldUpdateMayor: Boolean
@@ -67,9 +68,9 @@ object MayorAPI {
 		getNextMayorTimestamp()
 
 		if(!Mayor.JERRY.isElected()) return
-		if(jerryMayor.first == Mayor.UNKNOWN || jerryMayor.second.isFuture()) return
+		if(jerryMayor.first.mayor == Mayor.UNKNOWN || jerryMayor.second.isFuture()) return
 
-		jerryMayor = Mayor.UNKNOWN to Timestamp.distantPast()
+		jerryMayor = Mayor.UNKNOWN.withNone() to Timestamp.distantPast()
 
 		ChatUtils.addMessage(tr("nobaaddons.mayorApi.jerryMayorExpired", "The Perkpocalypse mayor has expired! Click here to get the new mayor").runCommand("/calendar"))
 	}
@@ -87,7 +88,7 @@ object MayorAPI {
 		val lore = item.lore.lines.map { it.string.cleanFormatting() }
 
 		val perk = lore.nextAfter("Perkpocalypse Perks:", 2) ?: return
-		val extraMayor = Mayor.getByPerk(MayorPerk.getByName(perk) ?: return)?.activateAllPerks() ?: return
+		val extraMayor = Mayor.getByPerk(MayorPerk.getByName(perk) ?: return)?.withAll() ?: return
 
 		val lastMayorTimestamp = nextMayorTimestamp - SKYBLOCK_YEAR_MILLIS.milliseconds
 
@@ -104,12 +105,12 @@ object MayorAPI {
 		
 		if(electionEndMessage == message) {
 			lastMayor = currentMayor
-			currentMayor = Mayor.UNKNOWN
-			currentMinister = Mayor.UNKNOWN
+			currentMayor = Mayor.UNKNOWN.withNone()
+			currentMinister = Mayor.UNKNOWN.withNone()
 		}
 	}
 
-	fun Mayor.isElected(): Boolean = currentMayor == this
+	fun Mayor.isElected(): Boolean = currentMayor.mayor == this
 
 	private suspend fun getCurrentMayor() {
 		if(!shouldUpdateMayor) return
@@ -119,10 +120,9 @@ object MayorAPI {
 		val mayor = mayorJson.mayor
 
 		val currentMayorName = mayor.name
-		if(lastMayor?.name != currentMayorName) {
-			MayorPerk.disableAll()
-			currentMayor = Mayor.getMayor(currentMayorName, mayor.perks)
-			currentMinister = mayor.minister?.let { Mayor.getMayor(it.name, listOf(it.perk)) } ?: Mayor.UNKNOWN
+		if(lastMayor?.mayor?.name != currentMayorName) {
+			currentMayor = Mayor.getByName(currentMayorName)?.with(mayorJson.mayor.perks) ?: Mayor.UNKNOWN.withNone()
+			currentMinister = mayor.minister?.let { Mayor.getByName(it.name)?.with(listOf(it.perk)) } ?: Mayor.UNKNOWN.withNone()
 		}
 	}
 

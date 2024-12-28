@@ -10,13 +10,18 @@ import me.nobaboy.nobaaddons.commands.internal.Group
 import me.nobaboy.nobaaddons.core.UpdateNotifier
 import me.nobaboy.nobaaddons.core.mayor.Mayor
 import me.nobaboy.nobaaddons.utils.ErrorManager
+import me.nobaboy.nobaaddons.utils.TextUtils.buildLiteral
 import me.nobaboy.nobaaddons.utils.TextUtils.buildText
+import me.nobaboy.nobaaddons.utils.TextUtils.gray
+import me.nobaboy.nobaaddons.utils.TextUtils.hoverText
 import me.nobaboy.nobaaddons.utils.TextUtils.toText
+import me.nobaboy.nobaaddons.utils.TextUtils.underline
 import me.nobaboy.nobaaddons.utils.annotations.UntranslatedMessage
 import me.nobaboy.nobaaddons.utils.chat.ChatUtils
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.text.MutableText
 import net.minecraft.text.Text
+import net.minecraft.text.Texts
 import net.minecraft.util.Formatting
 import kotlin.jvm.optionals.getOrNull
 
@@ -50,16 +55,26 @@ object DebugCommands : Group("debug") {
 		val mayor = MayorAPI.currentMayor
 		val minister = MayorAPI.currentMinister
 
-		if(mayor == Mayor.UNKNOWN && minister == Mayor.UNKNOWN) {
+		if(mayor.mayor == Mayor.UNKNOWN && minister.mayor == Mayor.UNKNOWN) {
 			it.source.sendError(Text.literal("Current Mayor and Minister are still unknown"))
 			return@Command
 		}
 
 		it.dumpInfo(
-			"Current Mayor" to mayor.mayorName,
-			"Mayor Perks" to mayor.activePerks,
-			"Current Minister" to minister.mayorName,
-			"Minister Perk" to minister.activePerks,
+			"Current Mayor" to buildLiteral(mayor.name) {
+				if(mayor.perks.isNotEmpty()) {
+					hoverText(Texts.join(mayor.perks.map { it.toString().toText().gray() }, Text.literal("\n\n")))
+					underline()
+				}
+				gray()
+			},
+			"Current Minister" to buildLiteral(minister.name) {
+				if(minister.perks.isNotEmpty()) {
+					hoverText(Texts.join(minister.perks.map { it.toString().toText().gray() }, Text.literal("\n\n")))
+					underline()
+				}
+				gray()
+			}
 		)
 	}
 

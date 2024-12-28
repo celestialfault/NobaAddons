@@ -1,5 +1,6 @@
 package me.nobaboy.nobaaddons.core.mayor
 
+import me.nobaboy.nobaaddons.api.skyblock.MayorAPI
 import me.nobaboy.nobaaddons.api.skyblock.MayorAPI.foxyExtraEventPattern
 import me.nobaboy.nobaaddons.data.json.Perk
 import me.nobaboy.nobaaddons.utils.RegexUtils.mapFullMatch
@@ -68,21 +69,19 @@ enum class MayorPerk(val perkName: String) {
 	BRIBE("Bribe"),
 	DARKER_AUCTIONS("Darker Auctions");
 
-	// FIXME noba why the fuck are these values mutable
-	var isActive = false
+	val isActive get() = MayorAPI.currentMayor.perks.contains(this) || MayorAPI.currentMinister.perks.contains(this)
+
+	// I'd like to remove the setter on this, but that would require putting *every* perk description in
+	// the repo, and that's a lot of work that I don't want to do right now.
 	var description = "Failed to load description from API"
-	var minister = false
 
 	override fun toString(): String = "$perkName: $description"
 
 	companion object {
 		fun getByName(name: String): MayorPerk? = entries.firstOrNull { it.perkName == name }
 
-		fun disableAll() = entries.forEach { it.isActive = false }
-
 		fun Perk.toPerk(): MayorPerk? = getByName(this.renameFoxyPerks())?.apply {
 			description = this@toPerk.description
-			minister = this@toPerk.minister
 		}
 
 		private fun Perk.renameFoxyPerks(): String {
