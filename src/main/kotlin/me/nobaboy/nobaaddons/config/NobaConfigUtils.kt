@@ -28,7 +28,6 @@ import me.nobaboy.nobaaddons.mixins.accessors.AbstractConfigAccessor
 import me.nobaboy.nobaaddons.utils.ErrorManager
 import me.nobaboy.nobaaddons.utils.NobaColor
 import me.nobaboy.nobaaddons.utils.NobaColor.Companion.toNobaColor
-import me.nobaboy.nobaaddons.utils.Scheduler
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.minecraft.text.Text
 import net.minecraft.util.PathUtil
@@ -53,16 +52,19 @@ object NobaConfigUtils {
 		} catch(ex: Throwable) {
 			val path = pathSupplier(this)
 			ErrorManager.logError("Failed to load a config file", ex)
+			path.renameToBackup()
+		}
+	}
 
-			val date = DATE_FORMATTER.format(ZonedDateTime.now())
-			val name = "${path.nameWithoutExtension}-${date}"
-			val backup = PathUtil.getNextUniqueName(NobaAddons.CONFIG_DIR, name, ".json")
+	fun Path.renameToBackup() {
+		val date = DATE_FORMATTER.format(ZonedDateTime.now())
+		val name = "${nameWithoutExtension}-${date}"
+		val backup = PathUtil.getNextUniqueName(NobaAddons.CONFIG_DIR, name, ".json")
 
-			if(path.toFile().renameTo(path.parent.resolve(backup).toFile())) {
-				NobaAddons.LOGGER.warn("Moved config file to $backup")
-			} else {
-				NobaAddons.LOGGER.warn("Couldn't rename config file")
-			}
+		if(toFile().renameTo(parent.resolve(backup).toFile())) {
+			NobaAddons.LOGGER.warn("Moved config file to $backup")
+		} else {
+			NobaAddons.LOGGER.warn("Couldn't rename config file")
 		}
 	}
 

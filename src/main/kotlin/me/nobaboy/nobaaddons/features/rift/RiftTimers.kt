@@ -1,13 +1,20 @@
 package me.nobaboy.nobaaddons.features.rift
 
+import dev.celestialfault.celestialconfig.MutableProperty
+import dev.celestialfault.celestialconfig.Property
+import dev.celestialfault.celestialconfig.Serializer
 import me.nobaboy.nobaaddons.api.skyblock.SkyBlockAPI
 import me.nobaboy.nobaaddons.api.skyblock.SkyBlockAPI.inIsland
-import me.nobaboy.nobaaddons.config.NobaConfig
+import me.nobaboy.nobaaddons.config.NobaConfigUtils.boolean
+import me.nobaboy.nobaaddons.config.NobaConfigUtils.cycler
+import me.nobaboy.nobaaddons.config.NobaConfigUtils.requiresAny
 import me.nobaboy.nobaaddons.core.profile.ProfileData
 import me.nobaboy.nobaaddons.core.SkyBlockIsland
 import me.nobaboy.nobaaddons.events.impl.chat.ChatMessageEvents
 import me.nobaboy.nobaaddons.events.impl.client.InventoryEvents
 import me.nobaboy.nobaaddons.events.impl.client.TickEvents
+import me.nobaboy.nobaaddons.features.Feature
+import me.nobaboy.nobaaddons.features.FeatureCategory
 import me.nobaboy.nobaaddons.repo.Repo.fromRepo
 import me.nobaboy.nobaaddons.utils.CommonPatterns
 import me.nobaboy.nobaaddons.utils.RegexUtils.firstFullMatch
@@ -35,11 +42,19 @@ import net.minecraft.text.Text
 import kotlin.math.floor
 import kotlin.time.Duration.Companion.hours
 
-object RiftTimers {
-	private val config = NobaConfig.INSTANCE.rift
+object RiftTimers : Feature(
+	id = "riftTimers",
+	name = tr("nobaaddons.feature.rift.timers", "Rift Timers"),
+	category = FeatureCategory.RIFT,
+	enabledByDefault = true,
+) {
 	private val data get() = ProfileData.PROFILE.riftTimers
 
-	private val warpLocation by config::warpTarget
+	var splitStealAlert by Property.of("splitStealAlert", false)
+	var splitStealItemCooldown by Property.of("splitStealItemCooldown", false)
+	var freeInfusionAlert by Property.of("freeInfusionAlert", false)
+	var warpLocation by Property.of("warpTarget", Serializer.enum(), RiftWarpTarget.WIZARD_TOWER)
+
 	private fun clickToWarp() = tr("nobaaddons.rift.clickToWarp", "Click to warp to ${warpLocation.displayName}").yellow()
 
 	private val freeInfusions by Regex("Free infusions: (?<count>\\d)/\\d").fromRepo("rift.free_infusions")
@@ -48,7 +63,34 @@ object RiftTimers {
 
 	private var notifiedSplitStealCooldown = false
 
-	fun init() {
+	override val configBuilder = simpleConfig {
+		val infusion = boolean(
+			tr("nobaaddons.config.rift.timers.freeInfusions", "Free Infusions"),
+			tr("nobaaddons.config.rift.timers.freeInfusions.tooltip", "Sends a message in chat when you regain a free Rift infusion"),
+			default = false,
+			property = ::freeInfusionAlert
+		)
+//		val ss = boolean(
+//			tr("nobaaddons.config.rift.timers.splitSteal", "Split or Steal"),
+//			tr("nobaaddons.config.rift.timers.splitSteal.tooltip", "Sends a message in chat when the Split or Steal cooldown ends"),
+//			default = defaults.rift.splitStealAlert,
+//			property = config.rift::splitStealAlert
+//		)
+//		boolean(
+//			tr("nobaaddons.config.rift.timers.splitStealItemCooldown", "Display Cooldown on Ubik's Cube"),
+//			tr("nobaaddons.config.rift.timers.splitStealItemCooldown.tooltip", "Adds the Split or Steal cooldown time remaining to the Ubik's Cube item tooltip"),
+//			default = defaults.rift.splitStealItemCooldown,
+//			property = config.rift::splitStealItemCooldown
+//		)
+//		cycler(
+//			tr("nobaaddons.config.rift.timers.warpTarget", "Warp To"),
+//			tr("nobaaddons.config.rift.timers.warpTarget.tooltip", "Where clicking on the sent chat message should warp you"),
+//			default = defaults.rift.warpTarget,
+//			property = config.rift::warpTarget
+//		) requiresAny listOf(infusion, ss)
+	}
+
+	override fun initFeature() {
 		TickEvents.everySecond { onSecondPassed() }
 		InventoryEvents.OPEN.register(this::onOpenInventory)
 		ChatMessageEvents.CHAT.register(this::onChatMessage)
@@ -57,7 +99,7 @@ object RiftTimers {
 
 	private fun addSplitStealItemCooldown(item: ItemStack, ctx: Item.TooltipContext, type: TooltipType, lines: MutableList<Text>) {
 		if(item.skyBlockId != "UBIKS_CUBE") return
-		if(!config.splitStealItemCooldown) return
+		if(!splitStealItemCooldown) return
 		val cooldown = data.nextSplitSteal?.takeIf { it.isFuture() }?.timeRemaining()?.toShortString()?.toText()?.yellow() ?: return
 
 		val index = lines.map { it.string.cleanFormatting() }.indexOfFirstFullMatch(CommonPatterns.COOLDOWN)
@@ -79,7 +121,7 @@ object RiftTimers {
 			null
 		}
 
-		if(config.freeInfusionAlert) {
+		if(freeInfusionAlert) {
 			val count = buildLiteral("(${data.freeRiftInfusions}/3)") { gray() }
 			ChatUtils.addMessageWithClickAction(
 				tr("nobaaddons.rift.gainedFreeInfusion", "You've regained a free Rift infusion! $count"),
@@ -94,7 +136,7 @@ object RiftTimers {
 		val nextSS = data.nextSplitSteal ?: return
 		if(nextSS.isPast() && !notifiedSplitStealCooldown) {
 			notifiedSplitStealCooldown = true
-			if(config.splitStealAlert) {
+			if(splitStealAlert) {
 				ChatUtils.addMessageWithClickAction(
 					tr("nobaaddons.rift.splitStealOffCooldown", "Split or Steal cooldown has ended!"),
 					builder = { hoverText(clickToWarp()) }

@@ -4,6 +4,18 @@
 package me.nobaboy.nobaaddons.config
 
 import com.google.gson.JsonObject
+import dev.celestialfault.celestialconfig.migrations.Migrations
+
+/*
+ * Migrations MUST be added at the end of this block, otherwise they will NOT run. Migrations that have already been
+ * applied are skipped, so new changes must be added as separate migrations. Removing pre-existing migrations is
+ * NOT supported and will cause player configs to completely break, so avoid doing so.
+ */
+val migrations = Migrations.create {
+	add(migration = ::`001_removeYaclVersion`)
+	add(migration = ::`002_inventoryCategory`)
+	add(migration = ::`003_renameGlaciteMineshaftShareCorpses`)
+}
 
 internal fun `001_removeYaclVersion`(json: JsonObject) {
 	json.remove("version")

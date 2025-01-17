@@ -33,15 +33,19 @@ group = mod.group
 base { archivesName.set(mod.id) }
 
 repositories {
-	fun strictMaven(url: String, vararg groups: String) = exclusiveContent {
-		forRepository { maven(url) }
+	fun strictMaven(url: String, vararg groups: String, includeLocal: Boolean = false) = exclusiveContent {
+		if(includeLocal) {
+			forRepositories(maven(url), mavenLocal())
+		} else {
+			forRepository { maven(url) }
+		}
 		filter { groups.forEach(::includeGroup) }
 	}
 
 	mavenCentral()
 	strictMaven("https://maven.isxander.dev/releases", "dev.isxander", "org.quiltmc.parsers") // YACL
 	strictMaven("https://maven.terraformersmc.com/", "com.terraformersmc") // ModMenu
-	strictMaven("https://maven.celestialfault.dev/releases", "dev.celestialfault") // CelestialConfig, Commander
+	strictMaven("https://maven.celestialfault.dev/releases", "dev.celestialfault", includeLocal = true) // CelestialConfig, Commander
 	strictMaven("https://repo.hypixel.net/repository/Hypixel/", "net.hypixel") // Hypixel Mod API
 	strictMaven("https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1", "me.djtheredstoner") // DevAuth
 	strictMaven("https://repo.nea.moe/releases", "moe.nea.mcautotranslations") // mc-auto-translations (which doesn't document anywhere that you need this!!!!)

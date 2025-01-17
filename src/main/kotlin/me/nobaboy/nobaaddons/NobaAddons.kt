@@ -22,12 +22,13 @@ import me.nobaboy.nobaaddons.api.skyblock.events.mythological.BurrowGuessAPI
 import me.nobaboy.nobaaddons.api.skyblock.events.mythological.DianaAPI
 import me.nobaboy.nobaaddons.commands.NobaCommand
 import me.nobaboy.nobaaddons.commands.SWikiCommand
+import me.nobaboy.nobaaddons.config.FeatureConfig
 import me.nobaboy.nobaaddons.config.NobaConfig
 import me.nobaboy.nobaaddons.config.NobaConfigUtils.safeLoad
 import me.nobaboy.nobaaddons.config.UISettings
 import me.nobaboy.nobaaddons.core.UpdateNotifier
 import me.nobaboy.nobaaddons.core.PersistentCache
-import me.nobaboy.nobaaddons.features.chat.alerts.IAlert
+import me.nobaboy.nobaaddons.features.chat.alerts.ChatAlerts
 import me.nobaboy.nobaaddons.features.chat.chatcommands.impl.DMCommands
 import me.nobaboy.nobaaddons.features.chat.chatcommands.impl.GuildCommands
 import me.nobaboy.nobaaddons.features.chat.chatcommands.impl.PartyCommands
@@ -115,6 +116,7 @@ object NobaAddons : ClientModInitializer {
 	override fun onInitializeClient() {
 		/* region Core */
 		NobaConfig.INSTANCE.safeLoad()
+		FeatureConfig.load()
 		PersistentCache.safeLoad()
 		RepoManager.init()
 		UISettings.safeLoad()
@@ -190,7 +192,7 @@ object NobaAddons : ClientModInitializer {
 		// endregion
 
 		// region Chat
-		IAlert.init()
+		ChatAlerts.init()
 		IChatFilter.init()
 		ChatNotifications.init()
 		// endregion
